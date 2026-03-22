@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useCallback } from 'react';
 import { Menu, X, Waves, Instagram, Facebook, MessageCircle, MapPin, Clock, Mail, Shield, Heart, Zap, Users, Dumbbell, Leaf } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
@@ -7,8 +7,9 @@ import { PRICE_TABLES, type ClassType, type PricePlan } from './constants';
 
 import { BookingForm } from './components/BookingForm';
 import { BrandName } from './components/BrandName';
-import { AdminPanel } from './components/AdminPanel';
 import { ErrorBoundary } from './components/ErrorBoundary';
+
+const AdminPanel = lazy(() => import('./components/AdminPanel').then((module) => ({ default: module.AdminPanel })));
 
 type PricingColor = 'primary' | 'secondary' | 'accent';
 
@@ -1211,7 +1212,14 @@ export default function App() {
       <AuthProvider>
         <Router>
           <Routes>
-            <Route path="/admin" element={<AdminPanel />} />
+            <Route
+              path="/admin"
+              element={
+                <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Cargando panel administrativo...</div>}>
+                  <AdminPanel />
+                </Suspense>
+              }
+            />
             <Route path="/" element={
               <div className="relative theme-handmade">
                 <Navbar />
