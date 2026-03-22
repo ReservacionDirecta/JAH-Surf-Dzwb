@@ -1,5 +1,6 @@
 // @ts-nocheck
 import express from "express";
+import type { NextFunction, Request, Response } from "express";
 import { createServer as createViteServer } from "vite";
 import fs from "fs";
 import path from "path";
@@ -22,6 +23,20 @@ interface StoredUser extends AuthUser {
   password: string; // hashed
   createdAt: string;
 }
+
+type RequestWithUser = Request & { user?: AuthUser };
+
+type StoreWriteBody = {
+  key?: unknown;
+  data?: unknown;
+  append?: unknown;
+};
+
+type BusboyInfo = {
+  filename?: string;
+  mimeType?: string;
+  mimetype?: string;
+};
 
 // Ensure environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-in-production';
@@ -53,6 +68,19 @@ async function startServer() {
     return crypto.createHash('sha256').update(password + JWT_SECRET).digest('hex');
   }
 
+  function isValidStoreKey(key: string): boolean {
+    return /^[a-zA-Z0-9_-]{1,64}$/.test(key);
+  }
+
+  function parseJsonWithFallback<T>(raw: string, fallback: T): T {
+    if (!raw) return fallback;
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return fallback;
+    }
+  }
+
   // Utility: Get users file path
   function getUsersPath(): string {
     return path.join(STORE_PATH, 'users.json');
@@ -66,7 +94,7 @@ async function startServer() {
     }
     try {
       const data = fs.readFileSync(usersPath, 'utf-8');
-      return JSON.parse(data);
+      return parseJsonWithFallback<StoredUser[]>(data, []);
     } catch (err) {
       console.error('Error loading users:', err);
       return [];
@@ -113,23 +141,23 @@ async function startServer() {
   }
 
   // Middleware: Authenticate
-  app.use((req, res, next) => {
+  app.use((req: RequestWithUser, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       const user = verifyJWT(token);
       if (user) {
-        (req as any).user = user;
+        req.user = user;
       }
     }
     next();
   });
 
   // Auth Routes
-  app.post('/api/auth/login', (req, res) => {
-    const { email, password } = req.body;
+  app.post('/api/auth/login', (req: Request, res: Response) => {
+    const { email, password } = req.body as { email?: unknown; password?: unknown };
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
       return res.status(400).json({ message: 'Email and password required' });
     }
 
@@ -156,10 +184,10 @@ async function startServer() {
     });
   });
 
-  app.post('/api/auth/register', (req, res) => {
-    const { email, password } = req.body;
+  app.post('/api/auth/register', (req: Request, res: Response) => {
+    const { email, password } = req.body as { email?: unknown; password?: unknown };
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
       return res.status(400).json({ message: 'Email and password required' });
     }
 
@@ -199,8 +227,8 @@ async function startServer() {
     });
   });
 
-  app.get('/api/auth/verify', (req, res) => {
-    const user = (req as any).user;
+  app.get('/api/auth/verify', (req: RequestWithUser, res: Response) => {
+    const user = req.user;
 
     if (!user) {
       return res.status(401).json({ message: 'Unauthorized' });
@@ -209,30 +237,33 @@ async function startServer() {
     res.json({ user });
   });
 
-  app.post('/api/auth/logout', (req, res) => {
+  app.post('/api/auth/logout', (_req: Request, res: Response) => {
     // Logout is client-side (token removal)
     res.json({ success: true });
   });
 
   // API Route to store data (protected)
-  app.post("/api/store", (req, res) => {
-    const user = (req as any).user;
+  app.post("/api/store", (req: RequestWithUser, res: Response) => {
+    const user = req.user;
     if (!user || user.role !== 'admin') {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    const { key, data, append = false } = req.body;
-    if (!key || data === undefined) {
+    const { key, data, append } = (req.body ?? {}) as StoreWriteBody;
+
+    if (typeof key !== 'string' || !isValidStoreKey(key) || data === undefined) {
       return res.status(400).json({ error: "Key and data are required" });
     }
 
+    const shouldAppend = append === true;
+
     const filePath = path.join(STORE_PATH, `${key}.json`);
     try {
-      if (append) {
-        let existingData: any = [];
+      if (shouldAppend) {
+        let existingData: unknown[] = [];
         if (fs.existsSync(filePath)) {
           const raw = fs.readFileSync(filePath, "utf-8");
-          existingData = raw ? JSON.parse(raw) : [];
+          existingData = parseJsonWithFallback<unknown[]>(raw, []);
         }
 
         if (!Array.isArray(existingData)) {
@@ -253,8 +284,11 @@ async function startServer() {
   });
 
   // API Route to retrieve data
-  app.get("/api/store/:key", (req, res) => {
+  app.get("/api/store/:key", (req: Request, res: Response) => {
     const { key } = req.params;
+    if (!isValidStoreKey(key)) {
+      return res.status(400).json({ error: "Invalid key" });
+    }
     const filePath = path.join(STORE_PATH, `${key}.json`);
 
     if (!fs.existsSync(filePath)) {
@@ -263,7 +297,11 @@ async function startServer() {
 
     try {
       const data = fs.readFileSync(filePath, "utf-8");
-      res.json(JSON.parse(data));
+      const parsed = parseJsonWithFallback<unknown>(data, null);
+      if (parsed === null && data.trim()) {
+        return res.status(500).json({ error: "Stored data is not valid JSON" });
+      }
+      res.json(parsed);
     } catch (err) {
       console.error(`Error reading from ${filePath}:`, err);
       res.status(500).json({ error: "Failed to retrieve data" });
@@ -271,7 +309,7 @@ async function startServer() {
   });
 
   // API Route to list all stored keys
-  app.get("/api/store", (req, res) => {
+  app.get("/api/store", (_req: Request, res: Response) => {
     try {
       if (!fs.existsSync(STORE_PATH)) {
         return res.json([]);
@@ -297,8 +335,8 @@ async function startServer() {
   }
 
   // API Route to upload images (protected)
-  app.post("/api/upload", (req, res) => {
-    const user = (req as any).user;
+  app.post("/api/upload", (req: RequestWithUser, res: Response) => {
+    const user = req.user;
     if (!user || user.role !== 'admin') {
       return res.status(403).json({ error: "Forbidden" });
     }
@@ -315,7 +353,7 @@ async function startServer() {
     let uploadRejected = false;
     let responseSent = false;
 
-    const sendOnce = (status: number, payload: any) => {
+    const sendOnce = (status: number, payload: Record<string, unknown>) => {
       if (responseSent) return;
       responseSent = true;
       res.status(status).json(payload);
@@ -323,9 +361,9 @@ async function startServer() {
 
     bb.on('file', (fieldname, file, info) => {
       const chunks: Buffer[] = [];
-      const safeInfo = typeof info === 'object' && info !== null ? info : {};
-      const mimeType = (safeInfo as any).mimeType || (safeInfo as any).mimetype || '';
-      const originalFilename = (safeInfo as any).filename || 'upload.jpg';
+      const safeInfo: BusboyInfo = typeof info === 'object' && info !== null ? (info as BusboyInfo) : {};
+      const mimeType = safeInfo.mimeType || safeInfo.mimetype || '';
+      const originalFilename = safeInfo.filename || 'upload.jpg';
 
       // Validate MIME type
       if (!mimeType.startsWith('image/')) {
@@ -411,7 +449,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
+    app.get("*", (_req: Request, res: Response) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

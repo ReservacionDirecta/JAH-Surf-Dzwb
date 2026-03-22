@@ -33,7 +33,28 @@ type VideoItem = {
 
 type ContentListKey = "galleryImages" | "experienceImages" | "videoLinks";
 
-const defaultContent = {
+type ContentState = {
+  heroTitle: string;
+  heroSubtitle: string;
+  aboutTitle: string;
+  aboutText: string;
+  contactEmail: string;
+  contactWhatsApp: string;
+  heroImageUrl: string;
+  aboutImageUrl: string;
+  galleryImages: GalleryImage[];
+  experienceImages: GalleryImage[];
+  videoLinks: VideoItem[];
+};
+
+type PricingItem = {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+};
+
+const defaultContent: ContentState = {
   heroTitle: "JAH SURF",
   heroSubtitle: "Donde el mar se encuentra con tu espíritu.",
   aboutTitle: "Más que una escuela, una filosofía",
@@ -58,7 +79,7 @@ const defaultContent = {
   videoLinks: [] as VideoItem[],
 };
 
-const defaultPricing = [
+const defaultPricing: PricingItem[] = [
   { id: "grupales", name: "Clases Grupales", price: 96, description: "Por persona" },
   { id: "individuales", name: "Clases Individuales", price: 180, description: "Por clase" },
   { id: "paddle", name: "Clases y Paseos en Paddle", price: 180, description: "Mismo costo que individuales" },
@@ -74,8 +95,8 @@ const defaultSettings = {
 export const AdminPanel = () => {
   const { user, isLoading, isAdmin, login, logout, error } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("content");
-  const [content, setContent] = useState<any>(defaultContent);
-  const [pricing, setPricing] = useState<any[]>(defaultPricing);
+  const [content, setContent] = useState<ContentState>(defaultContent);
+  const [pricing, setPricing] = useState<PricingItem[]>(defaultPricing);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [settings, setSettings] = useState(defaultSettings);
   const [saving, setSaving] = useState(false);
@@ -140,11 +161,18 @@ export const AdminPanel = () => {
           if (bookingsRes.ok) {
             const bookingsData = await bookingsRes.json();
             if (Array.isArray(bookingsData)) {
-              const normalized = bookingsData.map((b: any, idx: number) => ({
+              const normalized = bookingsData.map((b: Partial<Booking>, idx: number): Booking => ({
                 ...b,
                 id: b.id || `${b.timestamp || "booking"}-${idx}`,
                 status: b.status || "pendiente",
                 notes: b.notes || "",
+                activity: b.activity || "-",
+                plan: b.plan || "-",
+                numPeople: Number(b.numPeople) || 1,
+                date: b.date || "",
+                time: b.time || "",
+                totalPrice: Number(b.totalPrice) || 0,
+                whatsapp: b.whatsapp || "",
               }));
               setBookings(normalized.sort((a: Booking, b: Booking) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()));
             }
@@ -166,7 +194,7 @@ export const AdminPanel = () => {
     loadData();
   }, [isAdmin]);
 
-  const saveByKey = async (key: string, data: any, message: string) => {
+  const saveByKey = async (key: string, data: unknown, message: string) => {
     setSaving(true);
     try {
       await authenticatedFetch("/api/store", {
@@ -267,7 +295,7 @@ export const AdminPanel = () => {
           updateGalleryItem(galleryId, { src: url });
         }
       } else {
-        setContent((prev: any) => ({ ...prev, [fieldName]: url }));
+        setContent((prev) => ({ ...prev, [fieldName]: url }));
       }
     };
 
@@ -667,7 +695,7 @@ export const AdminPanel = () => {
                 <input 
                   value={content.heroImageUrl || ""} 
                   onChange={(e) => setContent({ ...content, heroImageUrl: e.target.value })} 
-                  onBlur={(e) => setContent((prev: any) => ({ ...prev, heroImageUrl: normalizeImageUrl(e.target.value) }))}
+                  onBlur={(e) => setContent((prev) => ({ ...prev, heroImageUrl: normalizeImageUrl(e.target.value) }))}
                   placeholder="https://ejemplo.com/imagen.jpg"
                   className="flex-1 border rounded-lg px-4 py-3" 
                 />
@@ -696,7 +724,7 @@ export const AdminPanel = () => {
                 <input 
                   value={content.aboutImageUrl || ""} 
                   onChange={(e) => setContent({ ...content, aboutImageUrl: e.target.value })} 
-                  onBlur={(e) => setContent((prev: any) => ({ ...prev, aboutImageUrl: normalizeImageUrl(e.target.value) }))}
+                  onBlur={(e) => setContent((prev) => ({ ...prev, aboutImageUrl: normalizeImageUrl(e.target.value) }))}
                   placeholder="https://ejemplo.com/imagen.jpg"
                   className="flex-1 border rounded-lg px-4 py-3" 
                 />
