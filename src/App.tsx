@@ -3,11 +3,31 @@ import { Menu, X, Waves, Instagram, Facebook, MessageCircle, MapPin, Clock, Mail
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { AuthProvider } from './AuthProvider';
+import { PRICE_TABLES, type ClassType, type PricePlan } from './constants';
 
 import { BookingForm } from './components/BookingForm';
 import { BrandName } from './components/BrandName';
 import { AdminPanel } from './components/AdminPanel';
 import { ErrorBoundary } from './components/ErrorBoundary';
+
+type PricingColor = 'primary' | 'secondary' | 'accent';
+
+type PricingPackage = {
+  name: string;
+  desc: string;
+  price: string;
+  amount: number;
+  perClass?: string;
+};
+
+type PricingCategory = {
+  id: ClassType;
+  title: string;
+  icon: React.ReactNode;
+  color: PricingColor;
+  desc: string;
+  packages: PricingPackage[];
+};
 
 // --- Components ---
 
@@ -582,7 +602,22 @@ const Equipment = () => {
   );
 };
 
-const PricingModal = ({ isOpen, onClose, title, packages, color }) => {
+type PricingModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  packages: PricingPackage[];
+  color: PricingColor;
+};
+
+const sanitizeWhatsapp = (value: string) => {
+  const cleaned = value.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '');
+  return cleaned.slice(0, 16);
+};
+
+const hasValidPhoneLength = (value: string) => value.replace(/\D/g, '').length >= 8;
+
+const PricingModal = ({ isOpen, onClose, title, packages, color }: PricingModalProps) => {
   const [name, setName] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('9hs a 11hs');
@@ -591,12 +626,6 @@ const PricingModal = ({ isOpen, onClose, title, packages, color }) => {
   const [numPeople, setNumPeople] = useState(1);
   const prefersReducedMotion = useReducedMotion();
   const timeOptions = ['9hs a 11hs', '12hs a 2pm', '3pm a 5pm'];
-
-  const extractPenAmount = (priceLabel: string) => {
-    const penMatch = priceLabel.match(/S\/\s*([\d.,]+)/i);
-    const rawValue = penMatch?.[1] ?? priceLabel.match(/([\d.,]+)/)?.[1] ?? '0';
-    return Number(rawValue.replace(/,/g, '')) || 0;
-  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -624,7 +653,7 @@ const PricingModal = ({ isOpen, onClose, title, packages, color }) => {
   if (!isOpen) return null;
 
   const selectedPackage = packages[selectedPackageIndex] || packages[0];
-  const selectedPackagePrice = selectedPackage ? extractPenAmount(selectedPackage.price) : 0;
+  const selectedPackagePrice = selectedPackage?.amount ?? 0;
   const totalPrice = selectedPackagePrice * numPeople;
 
   const colorClasses = {
@@ -646,7 +675,7 @@ const PricingModal = ({ isOpen, onClose, title, packages, color }) => {
       selected: 'border-accent bg-amber-50 ring-2 ring-accent/15',
       button: 'bg-amber-600 hover:bg-amber-700 shadow-amber-200'
     }
-  }[color || 'primary'];
+  }[color];
 
   return (
     <div className="fixed inset-0 z-[100] overflow-y-auto">
@@ -735,7 +764,7 @@ const PricingModal = ({ isOpen, onClose, title, packages, color }) => {
                     />
                   </div>
                 </div>
-                <input type="tel" placeholder="WhatsApp" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-4" />
+                <input type="tel" placeholder="WhatsApp" value={whatsapp} onChange={(e) => setWhatsapp(sanitizeWhatsapp(e.target.value))} className="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-4" />
 
                 <div className="rounded-2xl bg-slate-900 text-white p-5">
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-white/70 mb-2">Reserva seleccionada</p>
@@ -761,6 +790,11 @@ const PricingModal = ({ isOpen, onClose, title, packages, color }) => {
 
                     if (!name || !date || !whatsapp) {
                       alert('Por favor, completa nombre, fecha y WhatsApp.');
+                      return;
+                    }
+
+                    if (!hasValidPhoneLength(whatsapp)) {
+                      alert('Ingresa un número de WhatsApp válido.');
                       return;
                     }
 
@@ -861,65 +895,61 @@ const parseLatinDate = (value: string) => {
 };
 
 const Pricing = () => {
-  const [modalData, setModalData] = useState(null);
+  const [modalData, setModalData] = useState<PricingCategory | null>(null);
 
-  const pricingCategories = [
-    {
-      id: 'grupales',
-      title: "Clases Grupales",
+  const formatPenAmount = (amount: number) => `S/ ${amount.toLocaleString('en-US')}`;
+
+  const categoryMeta: Record<ClassType, Omit<PricingCategory, 'id' | 'packages'>> = {
+    grupales: {
+      title: 'Clases Grupales',
       icon: <Users className="w-12 h-12" />,
-      color: "primary",
-      desc: "Aprende con amigos o conoce gente nueva en un ambiente dinámico.",
-      packages: [
-        { name: "Clase Suelta", desc: "Sesión única de prueba", price: "S/ 108", perClass: "S/ 108" },
-        { name: "1 Clase x Semana", desc: "4 clases al mes", price: "S/ 360", perClass: "S/ 90" },
-        { name: "2 Clases x Semana", desc: "8 clases al mes", price: "S/ 672", perClass: "S/ 84" },
-        { name: "3 Clases x Semana", desc: "12 clases al mes", price: "S/ 984", perClass: "S/ 82" },
-        { name: "4 Clases x Semana", desc: "16 clases al mes", price: "S/ 1,200", perClass: "S/ 75" },
-      ]
+      color: 'primary',
+      desc: 'Aprende con amigos o conoce gente nueva en un ambiente dinámico.',
     },
-    {
-      id: 'individuales',
-      title: "Clases Individuales",
+    individuales: {
+      title: 'Clases Individuales',
       icon: <Zap className="w-12 h-12" />,
-      color: "secondary",
-      desc: "Atención 100% personalizada para perfeccionar tu técnica rápidamente.",
-      packages: [
-        { name: "Clase Suelta", desc: "Sesión única intensiva", price: "S/ 120", perClass: "S/ 120" },
-        { name: "1 Clase x Semana", desc: "4 clases al mes", price: "S/ 420", perClass: "S/ 105" },
-        { name: "2 Clases x Semana", desc: "8 clases al mes", price: "S/ 816", perClass: "S/ 102" },
-        { name: "3 Clases x Semana", desc: "12 clases al mes", price: "S/ 1,152", perClass: "S/ 96" },
-        { name: "4 Clases x Semana", desc: "16 clases al mes", price: "S/ 1,440", perClass: "S/ 90" },
-      ]
+      color: 'secondary',
+      desc: 'Atención 100% personalizada para perfeccionar tu técnica rápidamente.',
     },
-    {
-      id: 'paddle',
-      title: "Clases y Paseos en Paddle",
+    paddle: {
+      title: 'Clases y Paseos en Paddle',
       icon: <Waves className="w-12 h-12" />,
-      color: "accent",
-      desc: "Mismo costo y mismos paquetes que clases individuales, en modalidad Paddle.",
-      packages: [
-        { name: "Clase Suelta", desc: "Sesión única intensiva", price: "S/ 120", perClass: "S/ 120" },
-        { name: "1 Clase x Semana", desc: "4 clases al mes", price: "S/ 420", perClass: "S/ 105" },
-        { name: "2 Clases x Semana", desc: "8 clases al mes", price: "S/ 816", perClass: "S/ 102" },
-        { name: "3 Clases x Semana", desc: "12 clases al mes", price: "S/ 1,152", perClass: "S/ 96" },
-        { name: "4 Clases x Semana", desc: "16 clases al mes", price: "S/ 1,440", perClass: "S/ 90" },
-      ]
+      color: 'accent',
+      desc: 'Mismo costo y mismos paquetes que clases individuales, en modalidad Paddle.',
     },
-    {
-      id: 'otras',
-      title: "Otras Actividades",
+    otras: {
+      title: 'Otras Actividades',
       icon: <Waves className="w-12 h-12" />,
-      color: "accent",
-      desc: "Experiencias grupales, viajes y eventos diseñados para la comunidad.",
-      packages: [
-        { name: "Paseos en Paddle", desc: "Paseo grupal de 2 horas", price: "S/ 120" },
-        { name: "Surf Camps", desc: "Fin de semana inmersivo (Vie–Dom)", price: "S/ 816" },
-        { name: "Eventos Corporativos", desc: "Team building en el mar", price: "S/ 816" },
-        { name: "Alquiler de Equipo", desc: "Tabla + Wetsuit (2h)", price: "S/ 86" },
-      ]
-    }
-  ];
+      color: 'accent',
+      desc: 'Experiencias grupales, viajes y eventos diseñados para la comunidad.',
+    },
+  };
+
+  const mapPlanToPackage = (id: ClassType, plan: PricePlan): PricingPackage => {
+    const classesPerMonth = plan.classesPerMonth ?? 0;
+    const perClassAmount = classesPerMonth > 0 ? Math.round(plan.price / classesPerMonth) : undefined;
+
+    const defaultDesc = id === 'otras'
+      ? (plan.perPerson ? 'Precio por persona' : 'Consultar detalle')
+      : classesPerMonth > 0
+        ? `${classesPerMonth} clases al mes`
+        : 'Sesión única';
+
+    return {
+      name: plan.name,
+      desc: defaultDesc,
+      price: formatPenAmount(plan.price),
+      amount: plan.price,
+      perClass: perClassAmount ? formatPenAmount(perClassAmount) : undefined,
+    };
+  };
+
+  const pricingCategories: PricingCategory[] = (Object.keys(categoryMeta) as ClassType[]).map((id) => ({
+    id,
+    ...categoryMeta[id],
+    packages: PRICE_TABLES[id].map((plan) => mapPlanToPackage(id, plan)),
+  }));
 
   return (
     <section id="clases" className="py-20 md:py-32 section-paper section-divider">

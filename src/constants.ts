@@ -1,4 +1,13 @@
-export const PRICE_TABLES = {
+export type ClassType = 'grupales' | 'individuales' | 'paddle' | 'otras';
+
+export type PricePlan = {
+  name: string;
+  price: number;
+  classesPerMonth?: number;
+  perPerson?: boolean;
+};
+
+export const PRICE_TABLES: Record<ClassType, PricePlan[]> = {
   grupales: [
     { name: "Una sola clase", price: 108, classesPerMonth: 1 },
     { name: "1 clase/semana (4 al mes)", price: 360, classesPerMonth: 4 },

@@ -1,5 +1,5 @@
 ﻿import React, { useState, useMemo } from 'react';
-import { PRICE_TABLES } from '../constants';
+import { PRICE_TABLES, type ClassType } from '../constants';
 import { Calendar, Users, MessageCircle, Phone } from 'lucide-react';
 
 const formatLatinDateInput = (value: string) => {
@@ -31,8 +31,15 @@ const parseLatinDate = (value: string) => {
   return parsedDate;
 };
 
+const sanitizeWhatsapp = (value: string) => {
+  const cleaned = value.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '');
+  return cleaned.slice(0, 16);
+};
+
+const hasValidPhoneLength = (value: string) => value.replace(/\D/g, '').length >= 8;
+
 export const BookingForm = () => {
-  const [classType, setClassType] = useState<'grupales' | 'individuales' | 'paddle' | 'otras'>('grupales');
+  const [classType, setClassType] = useState<ClassType>('grupales');
   const [selectedPlanIndex, setSelectedPlanIndex] = useState(0);
   const [numPeople, setNumPeople] = useState(1);
   const [date, setDate] = useState('');
@@ -56,6 +63,11 @@ export const BookingForm = () => {
 
     if (!date || !whatsapp) {
       alert('Por favor, completa la fecha y tu número de WhatsApp.');
+      return;
+    }
+
+    if (!hasValidPhoneLength(whatsapp)) {
+      alert('Ingresa un número de WhatsApp válido.');
       return;
     }
 
@@ -211,7 +223,7 @@ export const BookingForm = () => {
               inputMode="tel"
               autoComplete="tel"
               value={whatsapp}
-              onChange={(e) => setWhatsapp(e.target.value)}
+              onChange={(e) => setWhatsapp(sanitizeWhatsapp(e.target.value))}
               className="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 sm:px-6 py-4 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-medium"
               placeholder="+51 900 000 000"
             />
