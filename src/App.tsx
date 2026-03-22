@@ -6,7 +6,6 @@ import { AuthProvider } from './AuthProvider';
 import { PRICE_TABLES, type ClassType, type PricePlan } from './constants';
 
 import { BookingForm } from './components/BookingForm';
-import { BrandName } from './components/BrandName';
 import { Logo } from './components/Logo';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -118,7 +117,7 @@ const Navbar = () => {
       <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${isScrolled || isMobileMenuOpen ? 'glass py-3 shadow-xl shadow-slate-900/5' : 'bg-transparent py-5 md:py-8'}`}>
         <div className="container mx-auto px-4 sm:px-6 flex justify-between items-center">
           <a href="#inicio" className="brand-liquid group inline-flex items-center rounded-2xl px-3.5 py-2.5 transition-all duration-300 hover:scale-[1.02]">
-            <Logo size="md" shape="square" className="w-24 h-12 text-[11px]" />
+            <Logo size="sm" shape="circle" className="w-12 h-12 text-[11px]" />
           </a>
 
           {/* Desktop Menu */}
@@ -1161,13 +1160,13 @@ const Footer = () => {
       <div className="container mx-auto px-4 sm:px-6">
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 md:gap-12">
           <div className="flex items-center gap-4">
-            <Logo size="sm" shape="square" className="w-16 h-10 text-[9px]" />
+            <Logo size="sm" shape="circle" className="w-11 h-11 text-[9px]" />
             <span className="text-accent text-2xl font-display font-black uppercase tracking-tighter">Peru</span>
           </div>
           
           <div className="text-center md:text-left">
             <p className="text-white/70 text-sm font-medium">
-              © 2026 <BrandName /> Peru. Todos los derechos reservados.
+              © 2026 JAH SURF Peru. Todos los derechos reservados.
             </p>
             <p className="text-white/60 text-[10px] uppercase font-black tracking-[0.2em] mt-2">
               Desarrollado por <a href="https://www.miraescuchahablaconamor.com" target="_blank" rel="noopener noreferrer" className="text-white/80 hover:text-primary transition-colors">miraescuchahablaconamor.com</a>
