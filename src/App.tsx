@@ -7,6 +7,7 @@ import { PRICE_TABLES, type ClassType, type PricePlan } from './constants';
 
 import { BookingForm } from './components/BookingForm';
 import { BrandName } from './components/BrandName';
+import { Logo } from './components/Logo';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 const AdminPanel = lazy(() => import('./components/AdminPanel').then((module) => ({ default: module.AdminPanel })));
@@ -117,9 +118,7 @@ const Navbar = () => {
       <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${isScrolled || isMobileMenuOpen ? 'glass py-3 shadow-xl shadow-slate-900/5' : 'bg-transparent py-5 md:py-8'}`}>
         <div className="container mx-auto px-4 sm:px-6 flex justify-between items-center">
           <a href="#inicio" className="brand-liquid group inline-flex items-center rounded-2xl px-3.5 py-2.5 transition-all duration-300 hover:scale-[1.02]">
-            <BrandName 
-              className="text-xl sm:text-2xl text-white" 
-            />
+            <Logo size="md" shape="square" className="w-24 h-12 text-[11px]" />
           </a>
 
           {/* Desktop Menu */}
@@ -1161,8 +1160,9 @@ const Footer = () => {
     <footer className="glass-dark py-14 md:py-20 border-t border-white/5">
       <div className="container mx-auto px-4 sm:px-6">
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 md:gap-12">
-          <div className="flex items-center gap-3">
-            <BrandName className="text-white text-2xl" /> <span className="text-accent text-2xl font-display font-black uppercase tracking-tighter">Peru</span>
+          <div className="flex items-center gap-4">
+            <Logo size="sm" shape="square" className="w-16 h-10 text-[9px]" />
+            <span className="text-accent text-2xl font-display font-black uppercase tracking-tighter">Peru</span>
           </div>
           
           <div className="text-center md:text-left">
