@@ -24,18 +24,16 @@ export const Logo: React.FC<LogoProps> = ({
   };
 
   return (
-    <div
-      className={`flex items-center justify-center bg-[#1a1c23] shadow-2xl overflow-hidden border border-white/5 ${sizeClasses[size]} ${shapeClasses[shape]} ${className}`}
-      aria-label="JAH SURF"
-      role="img"
-    >
+    <div className={`flex items-center justify-center bg-[#1a1c23] shadow-2xl overflow-hidden border border-white/5 ${sizeClasses[size]} ${shapeClasses[shape]} ${className}`}>
       <div className="flex flex-col items-center justify-center leading-[0.9] font-display font-black uppercase tracking-tighter">
         <div className="flex">
           <span className="text-[#ff3b3b]">J</span>
           <span className="text-[#ffcc00]">A</span>
           <span className="text-[#00df81]">H</span>
         </div>
-        <div className="text-[#40c4ff]">SURF</div>
+        <div className="text-[#40c4ff]">
+          SURF
+        </div>
       </div>
     </div>
   );

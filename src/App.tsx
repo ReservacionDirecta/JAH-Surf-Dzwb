@@ -6,7 +6,7 @@ import { AuthProvider } from './AuthProvider';
 import { PRICE_TABLES, type ClassType, type PricePlan } from './constants';
 
 import { BookingForm } from './components/BookingForm';
-import { Logo } from './components/Logo';
+import { Logo } from './components/logo';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 const AdminPanel = lazy(() => import('./components/AdminPanel').then((module) => ({ default: module.AdminPanel })));
