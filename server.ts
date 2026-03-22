@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import Busboy from "busboy";
+import type { Server } from "http";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -454,9 +455,29 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server: Server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
+
+  const gracefulShutdown = (signal: string) => {
+    console.log(`[SHUTDOWN] Received ${signal}. Closing HTTP server...`);
+    server.close((err?: Error) => {
+      if (err) {
+        console.error('[SHUTDOWN] Error while closing server:', err);
+        process.exit(1);
+      }
+      console.log('[SHUTDOWN] Server closed gracefully.');
+      process.exit(0);
+    });
+
+    setTimeout(() => {
+      console.error('[SHUTDOWN] Force exiting after timeout.');
+      process.exit(1);
+    }, 10000).unref();
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
 
 startServer();
