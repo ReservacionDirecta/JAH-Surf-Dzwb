@@ -6,10 +6,10 @@ interface LogoProps {
   className?: string;
 }
 
-export const Logo: React.FC<LogoProps> = ({
-  size = 'md',
+export const Logo: React.FC<LogoProps> = ({ 
+  size = 'md', 
   shape = 'circle',
-  className = ''
+  className = '' 
 }) => {
   const sizeClasses = {
     sm: 'w-10 h-10 text-[10px]',
